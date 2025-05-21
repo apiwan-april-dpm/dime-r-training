@@ -84,4 +84,48 @@ whr15_5 <- whr15 %>%
   group_by(region) %>%
   summarize(across(all_of(vars), mean))
 View(whr15_5)
+rm(whr15_2, whr15_3, whr15_4, whr15_5)
+
+# 2.6 Append and merge datasets 
+# Use bind_rows from dplyr
+whr_merged <- bind_rows(whr15, whr16, whr17)
+
+region <- readRDS(here("Data_DIME_R", "DataWork", "DataSets", "Raw", "Un WHR", "regions.RDS"))
+whr17_2 <- whr17 %>%
+  left_join(region, by = "country") %>% # Match rows where "country" is the same
+  select(country, region, everything()) # Rearrange the columns
+
+# Check if there's any country wihtout refion info
+whr17_2 %>%
+  filter(is.na(region))
+
+whr17_2 <- whr17_2 %>% 
+  mutate(
+    country = case_when( # Correct country names using "case_when" to replace values
+      country == "Hong Kong S.A.R., China" ~ "Hong Kong", 
+      country == "Taiwan Province of China" ~ "Taiwan",
+      TRUE ~ country # if neither condition matches, keep the original value
+    )
+  )
+
+whr17_2 <- whr17_2 %>% select(-region)
+
+whr17_2 <- whr17_2 %>%
+  left_join(region, by = "country") %>% 
+  select(country, region, everything()) 
+
+# Bind all rows and create a panel called "whr_panel"
+vars <- c("country", "year", "happiness_rank", 
+          "happiness_score", "economy_gdp_per_capita", 
+          "health_life_expectancy", "freedom")
+
+whr15 <- select(whr15, all_of(vars))
+whr16 <- select(whr16, all_of(vars))
+whr17 <- select(whr17, all_of(vars))
+whr_panel <- rbind(whr15, whr16, whr17)
+
+# 2.7 Saving a dataset
+write_csv(
+  whr_panel, here("Data_DIME_R", "DataWork", "DataSets", "Final", "whr_panel_AD.csv")
+)
 
